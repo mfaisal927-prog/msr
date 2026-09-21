@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition, useMemo, useEffect } from "react";
+import { useState, useTransition, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { addMonthlyExpense, deleteMonthlyExpense, updateMonthlyExpense, updateMonthlySettings } from "../../../actions";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, Legend } from 'recharts';
@@ -17,6 +17,8 @@ export default function MonthlyDashboardClient({ year, month, totals, prevMonthP
     const [editingExpenseId, setEditingExpenseId] = useState(null);
     const [expenseError, setExpenseError] = useState("");
     const [expenseSubmitting, setExpenseSubmitting] = useState(false);
+    const monthlyExpenseSectionRef = useRef(null);
+    const monthlyExpenseTitleRef = useRef(null);
 
     useEffect(() => {
         setMounted(true);
@@ -97,6 +99,13 @@ export default function MonthlyDashboardClient({ year, month, totals, prevMonthP
             notes: expense.notes || "",
         });
         setExpenseError("");
+        monthlyExpenseSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        setTimeout(() => monthlyExpenseTitleRef.current?.focus(), 250);
+    };
+
+    const openMonthlyExpenses = () => {
+        monthlyExpenseSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        setTimeout(() => monthlyExpenseTitleRef.current?.focus(), 250);
     };
 
     const handleDeleteExpense = async (expense) => {
@@ -306,43 +315,43 @@ export default function MonthlyDashboardClient({ year, month, totals, prevMonthP
                 </div>
 
                 <div className="summary-grid">
-                    <div className="summary-card">
+                    <button type="button" className="summary-card click-through-card" onClick={() => navigateTo(`/monthly/${year}/${month}/records`)}>
                         <div className="card-title">اس ماہ کی کل سیل</div>
                         <div className="card-value"><span className="card-currency">OMR</span>{formatOMR(totals.sales)}</div>
-                    </div>
-                    <div className="summary-card">
+                    </button>
+                    <button type="button" className="summary-card click-through-card" onClick={() => navigateTo(`/purchases`)}>
                         <div className="card-title">کل خریداری</div>
                         <div className="card-value"><span className="card-currency">OMR</span>{formatOMR(totals.purchases)}</div>
-                    </div>
-                    <div className="summary-card">
+                    </button>
+                    <button type="button" className="summary-card click-through-card" onClick={() => navigateTo(`/monthly/${year}/${month}/records`)}>
                         <div className="card-title">{isOptionOn ? "ایڈجسٹڈ اخراجات" : "کل اخراجات"}</div>
                         <div className="card-value"><span className="card-currency">OMR</span>{formatOMR(displayExpenses)}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                             روزانہ: {formatOMR(totals.expenses)} + ماہانہ: {formatOMR(monthlyExpenseTotal)}
                             {isOptionOn ? ` + پچھلا منافع: ${formatOMR(prevMonthProfit)}` : ""}
                         </div>
-                    </div>
-                    <div className="summary-card">
+                    </button>
+                    <button type="button" className="summary-card click-through-card" onClick={() => navigateTo(`/monthly/${year}/${month}/records`)}>
                         <div className="card-title">{isOptionOn ? "ایڈجسٹڈ منافع" : "خالص منافع"}</div>
                         <div className={`card-value ${displayProfit >= 0 ? 'profit-positive' : 'profit-negative'}`}><span className="card-currency">OMR</span>{formatOMR(displayProfit)}</div>
                         {isOptionOn && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>اصل منافع: {formatOMR(totals.profit)}</div>}
-                    </div>
+                    </button>
                 </div>
 
                 <div style={{ marginTop: '1rem', marginBottom: '2rem' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-                        <div className="summary-card" style={{ borderColor: '#f97316', backgroundColor: '#fff7ed', maxWidth: '300px', padding: '1rem 1.25rem' }}>
+                        <button type="button" className="summary-card click-through-card" onClick={() => navigateTo(`/monthly/${year}/${month}/records`)} style={{ borderColor: '#f97316', backgroundColor: '#fff7ed', maxWidth: '300px', padding: '1rem 1.25rem' }}>
                             <div className="card-title" style={{ color: '#c2410c' }}>اضافی اخراجات (پرسنل)</div>
                             <div className="card-value" style={{ fontSize: '1.5rem', color: '#ea580c' }}><span className="card-currency" style={{ color: '#ea580c' }}>OMR</span>{formatOMR(totalExtraExpense)}</div>
-                        </div>
-                        <div className="summary-card" style={{ borderColor: '#0ea5e9', backgroundColor: '#eff6ff', maxWidth: '300px', padding: '1rem 1.25rem' }}>
+                        </button>
+                        <button type="button" className="summary-card click-through-card" onClick={openMonthlyExpenses} style={{ borderColor: '#0ea5e9', backgroundColor: '#eff6ff', maxWidth: '300px', padding: '1rem 1.25rem' }}>
                             <div className="card-title" style={{ color: '#0369a1' }}>ماہانہ اخراجات</div>
                             <div className="card-value" style={{ fontSize: '1.5rem', color: '#0284c7' }}><span className="card-currency" style={{ color: '#0284c7' }}>OMR</span>{formatOMR(monthlyExpenseTotal)}</div>
-                        </div>
+                        </button>
                     </div>
                 </div>
 
-                <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', marginTop: '2rem' }}>ماہانہ اخراجات</h2>
+                <h2 ref={monthlyExpenseSectionRef} style={{ fontSize: '1.25rem', marginBottom: '1rem', marginTop: '2rem', scrollMarginTop: '110px' }}>ماہانہ اخراجات</h2>
                 <div className="card" style={{ marginBottom: '2.5rem' }}>
                     {expenseError && (
                         <div className="profit-negative" style={{ padding: '0.85rem', marginBottom: '1rem', backgroundColor: '#fee2e2', borderRadius: 'var(--radius-sm)', textAlign: 'center', fontWeight: 'bold' }}>
@@ -354,6 +363,7 @@ export default function MonthlyDashboardClient({ year, month, totals, prevMonthP
                         <div className="form-group" style={{ margin: 0 }}>
                             <label className="form-label" htmlFor="monthly-expense-title">خرچ کا نام</label>
                             <input
+                                ref={monthlyExpenseTitleRef}
                                 id="monthly-expense-title"
                                 type="text"
                                 className="form-input"
@@ -407,13 +417,19 @@ export default function MonthlyDashboardClient({ year, month, totals, prevMonthP
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                             {monthlyExpenses.map(expense => (
-                                <div key={expense.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', gap: '0.75rem', alignItems: 'center', padding: '0.85rem 1rem', border: '1px solid var(--border)', borderRadius: '10px', backgroundColor: 'var(--bg-color)' }}>
+                                <div
+                                    key={expense.id}
+                                    className="click-through-row"
+                                    onClick={() => handleEditExpense(expense)}
+                                    title="اس ماہانہ خرچ کو edit کریں"
+                                    style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', gap: '0.75rem', alignItems: 'center', padding: '0.85rem 1rem', border: '1px solid var(--border)', borderRadius: '10px', backgroundColor: 'var(--bg-color)' }}
+                                >
                                     <div>
                                         <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{expense.title}</div>
                                         {expense.notes && <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{expense.notes}</div>}
                                     </div>
                                     <div style={{ direction: 'ltr', fontWeight: 800, color: '#0369a1' }}>OMR {formatOMR(expense.amount)}</div>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }} onClick={(event) => event.stopPropagation()}>
                                         <button type="button" className="btn-action" style={{ width: 'auto', padding: '0.45rem 0.8rem', fontSize: '0.85rem' }} onClick={() => handleEditExpense(expense)} disabled={expenseSubmitting}>
                                             ترمیم
                                         </button>

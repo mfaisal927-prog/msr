@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getEntryByDate, deleteEntry } from "../actions";
+import { getPurchaseEntryByDate } from "../purchaseActions";
 import { formatOMR } from "../../lib/formatMoney";
 
 export default function DailyRecordClient() {
@@ -36,6 +37,16 @@ export default function DailyRecordClient() {
             setEntry(null); // Clear the view since it's deleted
             setIsDeleting(false);
         }
+    };
+
+    const openEntryEdit = () => {
+        if (entry?.id) router.push(`/records/${entry.id}/edit`);
+    };
+
+    const openPurchaseForDate = async () => {
+        if (!entry?.date) return;
+        const purchaseEntry = await getPurchaseEntryByDate(entry.date);
+        router.push(purchaseEntry?.id ? `/purchases/${purchaseEntry.id}/edit` : `/purchases/new?date=${entry.date}`);
     };
 
     return (
@@ -93,32 +104,32 @@ export default function DailyRecordClient() {
                                 </div>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem' }}>
+                                    <button type="button" className="drilldown-row" onClick={openEntryEdit}>
                                         <span style={{ color: 'var(--text-muted)' }}>سیل:</span>
                                         <span className="numeric-input" style={{ fontWeight: 'bold' }}>{formatOMR(entry.sale_total)} OMR</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem' }}>
+                                    </button>
+                                    <button type="button" className="drilldown-row" onClick={openPurchaseForDate}>
                                         <span style={{ color: 'var(--text-muted)' }}>خریداری:</span>
                                         <span className="numeric-input" style={{ fontWeight: 'bold' }}>{formatOMR(entry.purchase_total)} OMR</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem' }}>
+                                    </button>
+                                    <button type="button" className="drilldown-row" onClick={openEntryEdit}>
                                         <span style={{ color: 'var(--text-muted)' }}>اخراجات:</span>
                                         <span className="numeric-input" style={{ fontWeight: 'bold' }}>{formatOMR(entry.expense_total)} OMR</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem' }}>
+                                    </button>
+                                    <button type="button" className="drilldown-row" onClick={openEntryEdit}>
                                         <span style={{ color: 'var(--text-muted)' }}>اضافی اخراجات:</span>
                                         <span className="numeric-input" style={{ fontWeight: 'bold', color: '#ea580c' }}>{formatOMR(entry.extra_expense_total)} OMR</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem' }}>
+                                    </button>
+                                    <button type="button" className="drilldown-row" onClick={openEntryEdit}>
                                         <span style={{ color: 'var(--text-muted)' }}>مد (وجہ):</span>
                                         <span style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>{entry.extra_expense_reason || "-"}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.25rem', borderTop: '1px dashed var(--border)', paddingTop: '1rem' }}>
+                                    </button>
+                                    <button type="button" className="drilldown-row drilldown-row-total" onClick={openEntryEdit}>
                                         <span style={{ fontWeight: 'bold' }}>منافع:</span>
                                         <span className={`numeric-input ${entry.profit_total >= 0 ? 'profit-positive' : 'profit-negative'}`} style={{ fontWeight: 'bold' }}>
                                             {formatOMR(entry.profit_total)} OMR
                                         </span>
-                                    </div>
+                                    </button>
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '1rem' }}>

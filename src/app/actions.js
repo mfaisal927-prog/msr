@@ -821,6 +821,7 @@ export async function getLatestDashboardEntry() {
         const entry = await prisma.dailyEntry.findFirst({
             orderBy: { date: "desc" },
             select: {
+                id: true,
                 date: true,
                 sale_total: true,
                 purchase_total: true,
@@ -830,9 +831,18 @@ export async function getLatestDashboardEntry() {
             },
         });
 
+        const purchaseEntry = entry
+            ? await prisma.purchaseEntry.findUnique({
+                where: { date: entry.date },
+                select: { id: true },
+            })
+            : null;
+
         return entry
             ? {
+                id: entry.id,
                 date: entry.date,
+                purchaseEntryId: purchaseEntry?.id || null,
                 sale_total: entry.sale_total,
                 purchase_total: entry.purchase_total,
                 expense_total: entry.expense_total,

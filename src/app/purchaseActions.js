@@ -402,6 +402,21 @@ export async function getPurchaseEntry(id) {
     }
 }
 
+export async function getPurchaseEntryByDate(date) {
+    try {
+        if (!date) return null;
+        const entry = await prisma.purchaseEntry.findUnique({
+            where: { date },
+            select: { id: true, date: true }
+        });
+
+        return entry;
+    } catch (e) {
+        console.error(e);
+        return null;
+    }
+}
+
 export async function addPurchaseEntry(date, notes, lines) {
     try {
         const result = await prisma.$transaction(async (tx) => {

@@ -473,6 +473,39 @@ p {
   box-shadow: var(--shadow-md);
 }
 
+.click-through-card {
+  cursor: pointer;
+  text-align: inherit;
+  width: 100%;
+}
+
+.click-through-card::after {
+  content: "↗";
+  position: absolute;
+  top: 0.65rem;
+  left: 0.75rem;
+  color: var(--accent);
+  font-family: var(--font-inter), sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  opacity: 0;
+  transform: translate(-4px, 4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.click-through-card:hover::after,
+.click-through-card:focus-visible::after {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+.click-through-card:focus-visible,
+.click-through-row:focus-visible,
+.drilldown-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 .card-title {
   font-size: 1rem;
   color: var(--text-muted);
@@ -566,6 +599,40 @@ p {
 
 .data-table tbody tr:hover {
   background-color: color-mix(in srgb, var(--accent) 8%, var(--card-bg));
+}
+
+.click-through-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.click-through-row:hover {
+  background-color: color-mix(in srgb, var(--accent) 10%, var(--card-bg)) !important;
+}
+
+.drilldown-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  color: inherit;
+  font-size: 1.1rem;
+  padding: 0.65rem 0.25rem;
+  border-radius: var(--radius-sm);
+  text-align: inherit;
+  transition: background-color 0.2s ease, padding-inline 0.2s ease;
+}
+
+.drilldown-row:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  padding-inline: 0.75rem;
+}
+
+.drilldown-row-total {
+  border-top: 1px dashed var(--border);
+  font-size: 1.25rem;
+  padding-top: 1rem;
 }
 
 /* Utilities Messages */

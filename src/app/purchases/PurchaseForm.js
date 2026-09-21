@@ -103,12 +103,12 @@ function mapInitialLines(initialEntry) {
     }));
 }
 
-export default function PurchaseForm({ mode = "create", initialEntry = null }) {
+export default function PurchaseForm({ mode = "create", initialEntry = null, initialDate = null }) {
     const router = useRouter();
     const isEditMode = mode === "edit";
     const today = new Date().toLocaleDateString('en-CA');
 
-    const [date, setDate] = useState(initialEntry?.date || today);
+    const [date, setDate] = useState(initialEntry?.date || initialDate || today);
     const [notes, setNotes] = useState(initialEntry?.notes || "");
 
     const [itemsList, setItemsList] = useState([]);

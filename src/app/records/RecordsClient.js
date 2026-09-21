@@ -28,6 +28,10 @@ export default function RecordsClient({ initialEntries, backPath = "/dashboard" 
         }
     };
 
+    const openEntry = (id) => {
+        router.push(`/records/${id}/edit`);
+    };
+
     // Filter entries locally based on selected criteria
     const filteredEntries = initialEntries.filter((entry) => {
         const entryDate = new Date(entry.date);
@@ -223,7 +227,12 @@ export default function RecordsClient({ initialEntries, backPath = "/dashboard" 
                             </tr>
                         ) : (
                             filteredEntries.map((entry) => (
-                                <tr key={entry.id}>
+                                <tr
+                                    key={entry.id}
+                                    className="click-through-row"
+                                    onClick={() => openEntry(entry.id)}
+                                    title="اس ریکارڈ کو کھولیں / edit کریں"
+                                >
                                     <td style={{ fontWeight: '600' }}>{new Date(entry.date).toLocaleDateString('ur-PK')}</td>
                                     <td>{new Date(entry.date).toLocaleDateString('ur-PK', { weekday: 'long' })}</td>
                                     <td>
@@ -250,10 +259,10 @@ export default function RecordsClient({ initialEntries, backPath = "/dashboard" 
                                         {entry.extra_expense_reason || "-"}
                                     </td>
                                     <td style={{ textAlign: 'center' }}>
-                                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }} onClick={(event) => event.stopPropagation()}>
                                             <button
                                                 className="action-btn action-btn-edit"
-                                                onClick={() => router.push(`/records/${entry.id}/edit`)}
+                                                onClick={() => openEntry(entry.id)}
                                                 title="ترمیم کریں"
                                             >
                                                 ✎

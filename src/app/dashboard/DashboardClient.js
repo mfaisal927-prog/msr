@@ -173,6 +173,7 @@ export default function DashboardClient({ sixMonthsData = [], latestEntry }) {
             icon: ShoppingBag,
             tone: "blue",
             note: t.summaryCards.sales[1],
+            path: latestEntry?.id ? `/records/${latestEntry.id}/edit` : "/daily-entry",
         },
         {
             title: t.summaryCards.purchases[0],
@@ -180,6 +181,11 @@ export default function DashboardClient({ sixMonthsData = [], latestEntry }) {
             icon: PackageCheck,
             tone: "amber",
             note: t.summaryCards.purchases[1],
+            path: latestEntry?.purchaseEntryId
+                ? `/purchases/${latestEntry.purchaseEntryId}/edit`
+                : latestEntry?.date
+                    ? `/purchases/new?date=${latestEntry.date}`
+                    : "/purchases",
         },
         {
             title: t.summaryCards.expenses[0],
@@ -187,6 +193,7 @@ export default function DashboardClient({ sixMonthsData = [], latestEntry }) {
             icon: ReceiptText,
             tone: "rose",
             note: t.summaryCards.expenses[1],
+            path: latestEntry?.id ? `/records/${latestEntry.id}/edit` : "/records",
         },
         {
             title: t.summaryCards.profitTitle,
@@ -195,6 +202,7 @@ export default function DashboardClient({ sixMonthsData = [], latestEntry }) {
             tone: latestTotals.profit >= 0 ? "green" : "rose",
             note: latestTotals.profit >= 0 ? t.summaryCards.profitPositive : t.summaryCards.profitNegative,
             valueClass: latestTotals.profit >= 0 ? "profit-positive" : "profit-negative",
+            path: latestEntry?.id ? `/records/${latestEntry.id}/edit` : "/records",
         },
     ];
 
@@ -228,7 +236,12 @@ export default function DashboardClient({ sixMonthsData = [], latestEntry }) {
                 {summaryCards.map((card) => {
                     const Icon = card.icon;
                     return (
-                        <article key={card.title} className={`summary-card metric-card tone-${card.tone}`}>
+                        <button
+                            key={card.title}
+                            type="button"
+                            className={`summary-card metric-card tone-${card.tone} click-through-card`}
+                            onClick={() => navigateTo(card.path)}
+                        >
                             <div className="metric-card-header">
                                 <span className="metric-icon">
                                     <Icon size={20} />
@@ -240,7 +253,7 @@ export default function DashboardClient({ sixMonthsData = [], latestEntry }) {
                                 {formatAmount(card.value)}
                             </div>
                             <p className="metric-note">{card.note}</p>
-                        </article>
+                        </button>
                     );
                 })}
             </section>
