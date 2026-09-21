@@ -148,18 +148,20 @@ export default function SettingsPage() {
 
     const handlePasswordChange = async (event) => {
         event.preventDefault();
+        const form = event.currentTarget;
+        const formData = new FormData(form);
         setPasswordStatus(null);
         setIsChangingPassword(true);
 
         try {
-            const response = await changeAdminPassword(new FormData(event.currentTarget));
+            const response = await changeAdminPassword(formData);
 
             if (!response.success) {
                 setPasswordStatus({ type: "error", text: response.error || "Password تبدیل نہیں ہو سکا۔" });
                 return;
             }
 
-            event.currentTarget.reset();
+            form.reset();
             setPasswordStatus({ type: "success", text: response.message || "Password تبدیل ہو گیا۔" });
         } catch (error) {
             console.error(error);
@@ -171,18 +173,20 @@ export default function SettingsPage() {
 
     const handleCreateStaff = async (event) => {
         event.preventDefault();
+        const form = event.currentTarget;
+        const formData = new FormData(form);
         setStaffStatus(null);
         setIsCreatingStaff(true);
 
         try {
-            const response = await createStaffUser(new FormData(event.currentTarget));
+            const response = await createStaffUser(formData);
 
             if (!response.success) {
                 setStaffStatus({ type: "error", text: response.error || "Staff login نہیں بن سکا۔" });
                 return;
             }
 
-            event.currentTarget.reset();
+            form.reset();
             setStaffStatus({ type: "success", text: response.message || "Staff login بن گیا۔" });
             await loadAccountUsers();
         } catch (error) {
