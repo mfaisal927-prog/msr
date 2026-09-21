@@ -1,7 +1,15 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Database, Download, KeyRound, Settings, Type, Globe, Monitor, Upload } from "lucide-react";
-import { changeAdminPassword, exportBackupData, restoreBackupData } from "../actions";
+import { Database, Download, KeyRound, Settings, Type, Globe, Monitor, Upload, UserPlus, Users, Trash2, RotateCcw } from "lucide-react";
+import {
+    changeAdminPassword,
+    createStaffUser,
+    deleteStaffUser,
+    exportBackupData,
+    getAccountUsers,
+    resetStaffPassword,
+    restoreBackupData,
+} from "../actions";
 
 export default function SettingsPage() {
     const [language, setLanguage] = useState('ur');
@@ -11,9 +19,13 @@ export default function SettingsPage() {
     const [isClient, setIsClient] = useState(false);
     const [backupStatus, setBackupStatus] = useState(null);
     const [passwordStatus, setPasswordStatus] = useState(null);
+    const [staffStatus, setStaffStatus] = useState(null);
+    const [accountUsers, setAccountUsers] = useState([]);
     const [isBackingUp, setIsBackingUp] = useState(false);
     const [isRestoring, setIsRestoring] = useState(false);
     const [isChangingPassword, setIsChangingPassword] = useState(false);
+    const [isCreatingStaff, setIsCreatingStaff] = useState(false);
+    const [busyStaffId, setBusyStaffId] = useState(null);
     const restoreInputRef = useRef(null);
 
     useEffect(() => {
@@ -25,7 +37,15 @@ export default function SettingsPage() {
         setFont(localStorage.getItem('app_font') || defaultFont);
 
         setFontSize(localStorage.getItem('app_font_size') || 'medium');
+        loadAccountUsers();
     }, []);
+
+    const loadAccountUsers = async () => {
+        const response = await getAccountUsers();
+        if (response.success) {
+            setAccountUsers(response.users || []);
+        }
+    };
 
     const handleLanguageChange = (newLang) => {
         setLanguage(newLang);
@@ -146,6 +166,77 @@ export default function SettingsPage() {
             setPasswordStatus({ type: "error", text: "Password تبدیل کرتے وقت خرابی پیدا ہو گئی۔" });
         } finally {
             setIsChangingPassword(false);
+        }
+    };
+
+    const handleCreateStaff = async (event) => {
+        event.preventDefault();
+        setStaffStatus(null);
+        setIsCreatingStaff(true);
+
+        try {
+            const response = await createStaffUser(new FormData(event.currentTarget));
+
+            if (!response.success) {
+                setStaffStatus({ type: "error", text: response.error || "Staff login نہیں بن سکا۔" });
+                return;
+            }
+
+            event.currentTarget.reset();
+            setStaffStatus({ type: "success", text: response.message || "Staff login بن گیا۔" });
+            await loadAccountUsers();
+        } catch (error) {
+            console.error(error);
+            setStaffStatus({ type: "error", text: "Staff login بناتے وقت خرابی پیدا ہو گئی۔" });
+        } finally {
+            setIsCreatingStaff(false);
+        }
+    };
+
+    const handleResetStaffPassword = async (user) => {
+        const newPassword = window.prompt(`${user.username} کے لیے نیا password درج کریں:`);
+        if (!newPassword) return;
+
+        setBusyStaffId(user.id);
+        setStaffStatus(null);
+
+        try {
+            const formData = new FormData();
+            formData.append("newStaffPassword", newPassword);
+            const response = await resetStaffPassword(user.id, formData);
+
+            setStaffStatus({
+                type: response.success ? "success" : "error",
+                text: response.message || response.error || "Password reset نہیں ہو سکا۔",
+            });
+        } catch (error) {
+            console.error(error);
+            setStaffStatus({ type: "error", text: "Password reset کرتے وقت خرابی پیدا ہو گئی۔" });
+        } finally {
+            setBusyStaffId(null);
+        }
+    };
+
+    const handleDeleteStaff = async (user) => {
+        const confirmed = window.confirm(`${user.username} staff login delete کرنا ہے؟`);
+        if (!confirmed) return;
+
+        setBusyStaffId(user.id);
+        setStaffStatus(null);
+
+        try {
+            const response = await deleteStaffUser(user.id);
+            setStaffStatus({
+                type: response.success ? "success" : "error",
+                text: response.message || response.error || "Staff login delete نہیں ہو سکا۔",
+            });
+
+            if (response.success) await loadAccountUsers();
+        } catch (error) {
+            console.error(error);
+            setStaffStatus({ type: "error", text: "Staff login delete کرتے وقت خرابی پیدا ہو گئی۔" });
+        } finally {
+            setBusyStaffId(null);
         }
     };
 
@@ -337,6 +428,148 @@ export default function SettingsPage() {
                         {isChangingPassword ? (isUrdu ? "محفوظ ہو رہا ہے..." : "Saving...") : (isUrdu ? "Password تبدیل کریں" : "Change Password")}
                     </button>
                 </form>
+            </div>
+
+            <div className="card custom-form animate-slide-up" style={{ animationDelay: '0.14s', maxWidth: '800px', margin: '1.5rem auto 0' }}>
+                <h2 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Users size={20} className="text-primary" /> {isUrdu ? "Staff / Account Login" : "Staff / Account Login"}
+                </h2>
+
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                    {isUrdu
+                        ? "یہاں سے shop staff کے لیے limited login بنائیں۔ Staff صرف daily entry، records edit اور purchases تک جا سکے گا۔"
+                        : "Create limited staff logins. Staff can only access daily entry, record editing, and purchases."}
+                </p>
+
+                {staffStatus && (
+                    <div
+                        className={staffStatus.type === "success" ? "success-message" : "error-message"}
+                        style={{ padding: '0.85rem', marginBottom: '1rem', borderRadius: 'var(--radius-sm)', textAlign: 'center', fontWeight: 'bold' }}
+                    >
+                        {staffStatus.text}
+                    </div>
+                )}
+
+                <form onSubmit={handleCreateStaff} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', alignItems: 'end', marginBottom: '1.25rem' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" htmlFor="staffUsername">
+                            {isUrdu ? "Staff username" : "Staff username"}
+                        </label>
+                        <input
+                            id="staffUsername"
+                            name="staffUsername"
+                            type="text"
+                            className="form-input"
+                            autoComplete="username"
+                            minLength={3}
+                            required
+                        />
+                    </div>
+
+                    <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" htmlFor="staffPassword">
+                            {isUrdu ? "Password" : "Password"}
+                        </label>
+                        <input
+                            id="staffPassword"
+                            name="staffPassword"
+                            type="password"
+                            className="form-input"
+                            autoComplete="new-password"
+                            minLength={6}
+                            required
+                        />
+                    </div>
+
+                    <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" htmlFor="staffConfirmPassword">
+                            {isUrdu ? "Confirm password" : "Confirm password"}
+                        </label>
+                        <input
+                            id="staffConfirmPassword"
+                            name="staffConfirmPassword"
+                            type="password"
+                            className="form-input"
+                            autoComplete="new-password"
+                            minLength={6}
+                            required
+                        />
+                    </div>
+
+                    <button type="submit" className="btn-primary" disabled={isCreatingStaff} style={{ minHeight: '48px' }}>
+                        <UserPlus size={18} />
+                        {isCreatingStaff ? (isUrdu ? "بن رہا ہے..." : "Creating...") : (isUrdu ? "Staff Login بنائیں" : "Create Staff Login")}
+                    </button>
+                </form>
+
+                <div className="table-container">
+                    <table className="custom-table">
+                        <thead>
+                            <tr>
+                                <th>{isUrdu ? "Username" : "Username"}</th>
+                                <th>{isUrdu ? "Role" : "Role"}</th>
+                                <th>{isUrdu ? "Last login" : "Last login"}</th>
+                                <th>{isUrdu ? "Actions" : "Actions"}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {accountUsers.length === 0 ? (
+                                <tr>
+                                    <td colSpan="4" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
+                                        {isUrdu ? "کوئی user نہیں ملا۔" : "No users found."}
+                                    </td>
+                                </tr>
+                            ) : (
+                                accountUsers.map((user) => {
+                                    const isAdminUser = user.role === "ADMIN";
+                                    return (
+                                        <tr key={user.id}>
+                                            <td style={{ fontWeight: 800 }}>{user.username}</td>
+                                            <td>
+                                                <span className={isAdminUser ? "success-message" : "info-pill"} style={{ padding: '0.35rem 0.65rem', borderRadius: '999px', fontWeight: 800 }}>
+                                                    {isAdminUser ? "ADMIN" : "STAFF"}
+                                                </span>
+                                            </td>
+                                            <td style={{ direction: 'ltr', textAlign: 'right' }}>
+                                                {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "-"}
+                                            </td>
+                                            <td>
+                                                {isAdminUser ? (
+                                                    <span style={{ color: 'var(--text-muted)' }}>
+                                                        {isUrdu ? "Primary admin" : "Primary admin"}
+                                                    </span>
+                                                ) : (
+                                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-action"
+                                                            style={{ width: 'auto', padding: '0.45rem 0.7rem' }}
+                                                            onClick={() => handleResetStaffPassword(user)}
+                                                            disabled={busyStaffId === user.id}
+                                                        >
+                                                            <RotateCcw size={16} />
+                                                            {isUrdu ? "Reset" : "Reset"}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-action"
+                                                            style={{ width: 'auto', padding: '0.45rem 0.7rem', color: 'var(--danger)', borderColor: 'rgba(220, 38, 38, 0.35)' }}
+                                                            onClick={() => handleDeleteStaff(user)}
+                                                            disabled={busyStaffId === user.id}
+                                                        >
+                                                            <Trash2 size={16} />
+                                                            {isUrdu ? "Delete" : "Delete"}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div className="card custom-form animate-slide-up" style={{ animationDelay: '0.15s', maxWidth: '800px', margin: '1.5rem auto 0' }}>

@@ -6,8 +6,13 @@ import {
     clearAuthCookie,
     ensureAdminUser,
     getCurrentUser,
+    getPrimaryAdminId,
+    getUserRole,
     hashPassword,
+    requireAdminUser,
+    requireDataEntryUser,
     setAuthCookie,
+    USER_ROLES,
     verifyPassword,
 } from "../lib/auth"
 
@@ -39,8 +44,10 @@ export async function loginUser(formData) {
         data: { lastLoginAt: new Date() },
     });
 
+    const role = await getUserRole(user.id);
+
     try {
-        await setAuthCookie(user);
+        await setAuthCookie({ ...user, role });
     } catch (error) {
         console.error("Session setup error:", error);
         return { success: false, error: "Session setup مکمل نہیں ہے۔ AUTH_SECRET check کریں۔" };
@@ -51,6 +58,7 @@ export async function loginUser(formData) {
         user: {
             id: user.id,
             username: user.username,
+            role,
         },
     };
 }
@@ -61,10 +69,8 @@ export async function logoutUser() {
 }
 
 export async function changeAdminPassword(formData) {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-        return { success: false, error: "براہِ کرم دوبارہ login کریں۔" };
-    }
+    const { user: currentUser, error: authError } = await requireAdminUser();
+    if (authError) return authError;
 
     const currentPassword = String(formData.get("currentPassword") || "");
     const newPassword = String(formData.get("newPassword") || "");
@@ -96,6 +102,138 @@ export async function changeAdminPassword(formData) {
     });
 
     return { success: true, message: "پاس ورڈ کامیابی سے تبدیل ہو گیا۔" };
+}
+
+function serializeAccountUser(user, primaryAdminId) {
+    return {
+        id: user.id,
+        username: user.username,
+        role: user.id === primaryAdminId ? USER_ROLES.ADMIN : USER_ROLES.STAFF,
+        lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+        createdAt: user.createdAt ? user.createdAt.toISOString() : null,
+    };
+}
+
+export async function getAccountUsers() {
+    const { error: authError } = await requireAdminUser();
+    if (authError) return { success: false, users: [], error: authError.error };
+
+    const primaryAdminId = await getPrimaryAdminId();
+    const users = await prisma.adminUser.findMany({
+        orderBy: { id: "asc" },
+        select: {
+            id: true,
+            username: true,
+            lastLoginAt: true,
+            createdAt: true,
+        },
+    });
+
+    return {
+        success: true,
+        users: users.map((user) => serializeAccountUser(user, primaryAdminId)),
+    };
+}
+
+export async function createStaffUser(formData) {
+    const { error: authError } = await requireAdminUser();
+    if (authError) return authError;
+
+    const username = String(formData.get("staffUsername") || "").trim();
+    const password = String(formData.get("staffPassword") || "");
+    const confirmPassword = String(formData.get("staffConfirmPassword") || "");
+
+    if (!username || !password || !confirmPassword) {
+        return { success: false, error: "Staff username اور password مکمل درج کریں۔" };
+    }
+
+    if (username.length < 3) {
+        return { success: false, error: "Username کم از کم 3 حروف کا ہونا چاہیے۔" };
+    }
+
+    if (password.length < 6) {
+        return { success: false, error: "Password کم از کم 6 حروف کا ہونا چاہیے۔" };
+    }
+
+    if (password !== confirmPassword) {
+        return { success: false, error: "Password اور confirm password ایک جیسے نہیں ہیں۔" };
+    }
+
+    const existing = await prisma.adminUser.findUnique({ where: { username } });
+    if (existing) {
+        return { success: false, error: "یہ username پہلے سے موجود ہے۔ دوسرا username رکھیں۔" };
+    }
+
+    const user = await prisma.adminUser.create({
+        data: {
+            username,
+            passwordHash: hashPassword(password),
+        },
+        select: {
+            id: true,
+            username: true,
+            lastLoginAt: true,
+            createdAt: true,
+        },
+    });
+
+    revalidatePath("/settings");
+    return {
+        success: true,
+        message: "Staff login بن گیا۔",
+        user: serializeAccountUser(user, await getPrimaryAdminId()),
+    };
+}
+
+async function getEditableStaffUser(userId) {
+    const id = parseInt(userId, 10);
+    if (!Number.isFinite(id)) return { error: "User درست نہیں ہے۔" };
+
+    const primaryAdminId = await getPrimaryAdminId();
+    if (id === primaryAdminId) {
+        return { error: "Primary admin account کو staff action سے تبدیل نہیں کیا جا سکتا۔" };
+    }
+
+    const user = await prisma.adminUser.findUnique({
+        where: { id },
+        select: { id: true, username: true },
+    });
+
+    if (!user) return { error: "Staff user نہیں ملا۔" };
+    return { user };
+}
+
+export async function resetStaffPassword(userId, formData) {
+    const { error: authError } = await requireAdminUser();
+    if (authError) return authError;
+
+    const { user, error } = await getEditableStaffUser(userId);
+    if (error) return { success: false, error };
+
+    const password = String(formData.get("newStaffPassword") || "");
+    if (password.length < 6) {
+        return { success: false, error: "نیا password کم از کم 6 حروف کا ہونا چاہیے۔" };
+    }
+
+    await prisma.adminUser.update({
+        where: { id: user.id },
+        data: { passwordHash: hashPassword(password) },
+    });
+
+    return { success: true, message: `${user.username} کا password تبدیل ہو گیا۔` };
+}
+
+export async function deleteStaffUser(userId) {
+    const { error: authError } = await requireAdminUser();
+    if (authError) return authError;
+
+    const { user, error } = await getEditableStaffUser(userId);
+    if (error) return { success: false, error };
+
+    await prisma.adminUser.delete({ where: { id: user.id } });
+    revalidatePath("/settings");
+
+    return { success: true, message: `${user.username} staff login حذف ہو گیا۔` };
 }
 
 function parseDailyEntryForm(formData) {
@@ -140,6 +278,9 @@ function serializeDailyEntry(entry) {
 }
 
 export async function createEntry(formData, overwriteExisting = false) {
+    const { error: authError } = await requireDataEntryUser();
+    if (authError) return authError;
+
     const { date, monthStr, data } = parseDailyEntryForm(formData)
 
     // Check if an entry already exists for this date
@@ -178,6 +319,9 @@ export async function createEntry(formData, overwriteExisting = false) {
 }
 
 export async function updateEntry(id, formData) {
+    const { error: authError } = await requireDataEntryUser();
+    if (authError) return authError;
+
     const date = formData.get("date")
     const sale_total = parseFloat(formData.get("sales")) || 0
     const purchase_total = parseFloat(formData.get("purchases")) || 0
@@ -209,6 +353,9 @@ export async function updateEntry(id, formData) {
 }
 
 export async function deleteEntry(id) {
+    const { error: authError } = await requireAdminUser();
+    if (authError) return authError;
+
     const entry = await prisma.dailyEntry.findUnique({ where: { id: parseInt(id) } });
     if (entry) {
         await prisma.dailyEntry.delete({
@@ -245,6 +392,9 @@ export async function getEntriesByMonth(year, month) {
 }
 
 export async function importCsvEntries(entries, overwrite = false) {
+    const { error: authError } = await requireDataEntryUser();
+    if (authError) return authError;
+
     try {
         const datesInCsv = entries.map(e => e.date);
 
@@ -301,6 +451,9 @@ export async function getEntryByDate(date) {
 }
 
 export async function importPastedData(pastedText, saveValid = false) {
+    const { error: authError } = await requireDataEntryUser();
+    if (authError) return authError;
+
     try {
         const lines = pastedText.split('\n');
         let duplicateCount = 0;
@@ -533,6 +686,9 @@ export async function getMonthlySettings(year, month) {
 }
 
 export async function updateMonthlySettings(year, month, include_prev_profit) {
+    const { error: authError } = await requireAdminUser();
+    if (authError) return authError;
+
     try {
         const y = parseInt(year, 10);
         const m = parseInt(month, 10);
@@ -618,6 +774,9 @@ export async function getMonthlyExpenses(year, month) {
 }
 
 export async function addMonthlyExpense(year, month, formData) {
+    const { error: authError } = await requireAdminUser();
+    if (authError) return authError;
+
     try {
         const parsed = parseMonthlyExpenseForm(year, month, formData);
         if (parsed.error) return { success: false, error: parsed.error };
@@ -637,6 +796,9 @@ export async function addMonthlyExpense(year, month, formData) {
 }
 
 export async function updateMonthlyExpense(id, year, month, formData) {
+    const { error: authError } = await requireAdminUser();
+    if (authError) return authError;
+
     try {
         const parsed = parseMonthlyExpenseForm(year, month, formData);
         if (parsed.error) return { success: false, error: parsed.error };
@@ -657,6 +819,9 @@ export async function updateMonthlyExpense(id, year, month, formData) {
 }
 
 export async function deleteMonthlyExpense(id, year, month) {
+    const { error: authError } = await requireAdminUser();
+    if (authError) return authError;
+
     try {
         const y = parseInt(year, 10);
         const m = parseInt(month, 10);
@@ -689,6 +854,9 @@ function withCreatedAt(row) {
 }
 
 export async function exportBackupData() {
+    const { error: authError } = await requireAdminUser();
+    if (authError) return authError;
+
     try {
         const [
             dailyEntries,
@@ -731,6 +899,9 @@ export async function exportBackupData() {
 }
 
 export async function restoreBackupData(backup) {
+    const { error: authError } = await requireAdminUser();
+    if (authError) return authError;
+
     try {
         if (!backup || backup.app !== "malik-sajawal-refreshment" || !backup.data) {
             return { success: false, error: "Backup file درست نہیں ہے۔" };

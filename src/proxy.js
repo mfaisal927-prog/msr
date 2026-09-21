@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 const AUTH_COOKIE_NAME = "malik_sajawal_session";
 const LOCAL_AUTH_SECRET = "malik-sajawal-local-dev-secret-change-before-vercel";
 const PUBLIC_PATH_PATTERN = /^\/(?:_next|favicon\.ico|.*\..*)/;
+const STAFF_ROLE = "STAFF";
+const STAFF_HOME_PATH = "/daily-entry";
+const STAFF_ALLOWED_PATHS = ["/dashboard", "/daily-entry", "/records", "/daily", "/purchases"];
 
 function getAuthSecret() {
   if (process.env.AUTH_SECRET) return process.env.AUTH_SECRET;
@@ -68,6 +71,10 @@ async function verifySessionValue(value) {
   }
 }
 
+function isStaffAllowedPath(pathname) {
+  return STAFF_ALLOWED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
 export async function proxy(request) {
   const { pathname } = request.nextUrl;
 
@@ -85,7 +92,12 @@ export async function proxy(request) {
   }
 
   if (session && isLoginPage) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    const homePath = session.role === STAFF_ROLE ? STAFF_HOME_PATH : "/dashboard";
+    return NextResponse.redirect(new URL(homePath, request.url));
+  }
+
+  if (session?.role === STAFF_ROLE && !isStaffAllowedPath(pathname)) {
+    return NextResponse.redirect(new URL(STAFF_HOME_PATH, request.url));
   }
 
   return NextResponse.next();

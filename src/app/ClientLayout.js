@@ -5,7 +5,7 @@ import { Menu, X, Moon, Sun, LayoutDashboard, CalendarDays, List, BarChart3, Set
 import Link from 'next/link';
 import { logoutUser } from './actions';
 
-export default function ClientLayout({ children }) {
+export default function ClientLayout({ children, currentUser }) {
     const [theme, setTheme] = useState('light');
     const [language, setLanguage] = useState('ur');
     const [font, setFont] = useState('jameel');
@@ -16,6 +16,7 @@ export default function ClientLayout({ children }) {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
+    const isStaffUser = currentUser?.role === 'STAFF';
 
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme') || 'light';
@@ -85,6 +86,21 @@ export default function ClientLayout({ children }) {
         return <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>{children}</main>;
     }
 
+    const accountingItems = isStaffUser
+        ? [
+            { name: 'روزانہ انٹری', nameEn: 'Daily Entry', path: '/daily-entry', icon: CalendarDays, color: '#059669', bgColor: 'rgba(5, 150, 105, 0.12)' },
+            { name: 'ڈیلی ریکارڈ', nameEn: 'Daily Records', path: '/records', icon: List, color: '#4f46e5', bgColor: 'rgba(79, 70, 229, 0.12)' },
+            { name: 'مخصوص تاریخ', nameEn: 'Specific Date', path: '/daily', icon: CalendarSearch, color: '#7c3aed', bgColor: 'rgba(124, 58, 237, 0.12)' },
+            { name: 'خریداری', nameEn: 'Purchases', path: '/purchases', icon: ShoppingCart, color: '#ea580c', bgColor: 'rgba(234, 88, 12, 0.12)' }
+        ]
+        : [
+            { name: 'روزانہ انٹری', nameEn: 'Daily Entry', path: '/daily-entry', icon: CalendarDays, color: '#059669', bgColor: 'rgba(5, 150, 105, 0.12)' },
+            { name: 'ماہانہ حساب', nameEn: 'Monthly', path: '/monthly', icon: CalendarDays, color: '#2563eb', bgColor: 'rgba(37, 99, 235, 0.12)' },
+            { name: 'ڈیلی ریکارڈ', nameEn: 'Daily Records', path: '/records', icon: List, color: '#4f46e5', bgColor: 'rgba(79, 70, 229, 0.12)' },
+            { name: 'مخصوص تاریخ', nameEn: 'Specific Date', path: '/daily', icon: CalendarSearch, color: '#7c3aed', bgColor: 'rgba(124, 58, 237, 0.12)' },
+            { name: 'خریداری', nameEn: 'Purchases', path: '/purchases', icon: ShoppingCart, color: '#ea580c', bgColor: 'rgba(234, 88, 12, 0.12)' }
+        ];
+
     const navGroups = [
         {
             title: language === 'ur' ? 'مرکزی' : 'Main',
@@ -94,14 +110,9 @@ export default function ClientLayout({ children }) {
         },
         {
             title: language === 'ur' ? 'حساب' : 'Accounting',
-            items: [
-                { name: 'ماہانہ حساب', nameEn: 'Monthly', path: '/monthly', icon: CalendarDays, color: '#2563eb', bgColor: 'rgba(37, 99, 235, 0.12)' },
-                { name: 'ڈیلی ریکارڈ', nameEn: 'Daily Records', path: '/records', icon: List, color: '#4f46e5', bgColor: 'rgba(79, 70, 229, 0.12)' },
-                { name: 'مخصوص تاریخ', nameEn: 'Specific Date', path: '/daily', icon: CalendarSearch, color: '#7c3aed', bgColor: 'rgba(124, 58, 237, 0.12)' },
-                { name: 'خریداری', nameEn: 'Purchases', path: '/purchases', icon: ShoppingCart, color: '#ea580c', bgColor: 'rgba(234, 88, 12, 0.12)' }
-            ]
+            items: accountingItems
         },
-        {
+        ...(!isStaffUser ? [{
             title: language === 'ur' ? 'رپورٹس' : 'Analytics',
             items: [
                 { name: 'رپورٹس', nameEn: 'Reports', path: '/reports', icon: BarChart3, color: '#0f766e', bgColor: 'rgba(15, 118, 110, 0.12)' },
@@ -113,16 +124,23 @@ export default function ClientLayout({ children }) {
             items: [
                 { name: 'سیٹنگز', nameEn: 'Settings', path: '/settings', icon: Settings, color: '#475569', bgColor: 'rgba(71, 85, 105, 0.12)' }
             ]
-        }
+        }] : [])
     ];
 
-    const mainLinks = [
-        { name: 'ڈیش بورڈ', nameEn: 'Dashboard', path: '/dashboard' },
-        { name: 'ماہانہ حساب', nameEn: 'Monthly', path: '/monthly' },
-        { name: 'ڈیلی ریکارڈ', nameEn: 'Daily', path: '/records' },
-        { name: 'رپورٹس', nameEn: 'Reports', path: '/reports' },
-        { name: 'خریداری', nameEn: 'Purchases', path: '/purchases' }
-    ];
+    const mainLinks = isStaffUser
+        ? [
+            { name: 'روزانہ انٹری', nameEn: 'Daily Entry', path: '/daily-entry' },
+            { name: 'ڈیلی ریکارڈ', nameEn: 'Daily', path: '/records' },
+            { name: 'خریداری', nameEn: 'Purchases', path: '/purchases' }
+        ]
+        : [
+            { name: 'ڈیش بورڈ', nameEn: 'Dashboard', path: '/dashboard' },
+            { name: 'روزانہ انٹری', nameEn: 'Daily Entry', path: '/daily-entry' },
+            { name: 'ماہانہ حساب', nameEn: 'Monthly', path: '/monthly' },
+            { name: 'ڈیلی ریکارڈ', nameEn: 'Daily', path: '/records' },
+            { name: 'رپورٹس', nameEn: 'Reports', path: '/reports' },
+            { name: 'خریداری', nameEn: 'Purchases', path: '/purchases' }
+        ];
 
     return (
         <div className={`flex-wrapper app-layout ${sidebarOpen ? 'sidebar-open' : ''}`}>
@@ -146,7 +164,7 @@ export default function ClientLayout({ children }) {
                             {!isCollapsed && <div className="nav-group-title">{group.title}</div>}
                             {group.items.map((item) => {
                                 const Icon = item.icon;
-                                const isActive = item.path !== '/' && !item.path.startsWith('#') ? pathname.startsWith(item.path) : false;
+                                const isActive = item.path !== '/' && !item.path.startsWith('#') ? pathname === item.path || pathname.startsWith(`${item.path}/`) : false;
                                 return (
                                     <Link key={item.path} href={item.path} onClick={() => setSidebarOpen(false)}
                                         className={`sidebar-link ${isActive ? 'active' : ''}`}
@@ -239,7 +257,7 @@ export default function ClientLayout({ children }) {
                         {/* Center / Navigation */}
                         <div className="header-nav-section desktop-only">
                             {mainLinks.map(item => {
-                                const isActive = item.path === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(item.path);
+                                const isActive = item.path === '/dashboard' ? pathname === '/dashboard' : pathname === item.path || pathname.startsWith(`${item.path}/`);
                                 return (
                                     <Link key={item.path} href={item.path} className={`saas-nav-link ${isActive ? 'active' : ''}`}>
                                         {language === 'ur' ? item.name : item.nameEn}

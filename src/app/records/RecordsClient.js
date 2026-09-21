@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { deleteEntry } from "../actions";
 import { formatOMR } from "../../lib/formatMoney";
 
-export default function RecordsClient({ initialEntries, backPath = "/dashboard" }) {
+export default function RecordsClient({ initialEntries, backPath = "/dashboard", canDelete = true, canExport = true }) {
     const router = useRouter();
     const [isDeleting, setIsDeleting] = useState(false);
     const [mounted, setMounted] = useState(false);
@@ -21,6 +21,8 @@ export default function RecordsClient({ initialEntries, backPath = "/dashboard" 
     const [sortOrder, setSortOrder] = useState("desc"); // New: sort state
 
     const handleDelete = async (id) => {
+        if (!canDelete) return;
+
         if (window.confirm("کیا آپ واقعی ڈیلیٹ کرنا چاہتے ہیں؟")) {
             setIsDeleting(true);
             await deleteEntry(id);
@@ -188,12 +190,16 @@ export default function RecordsClient({ initialEntries, backPath = "/dashboard" 
             </div>
 
             <div className="export-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', alignItems: 'center' }}>
-                <button className="btn-save" style={{ flex: 1, backgroundColor: '#3b82f6' }} onClick={handlePrint}>
-                    PDF پرنٹ کریں 🖨️
-                </button>
-                <button className="btn-save" style={{ flex: 1, backgroundColor: '#10b981' }} onClick={handleDownloadCSV}>
-                    CSV ڈاؤن لوڈ کریں 📥
-                </button>
+                {canExport && (
+                    <>
+                        <button className="btn-save" style={{ flex: 1, backgroundColor: '#3b82f6' }} onClick={handlePrint}>
+                            PDF پرنٹ کریں 🖨️
+                        </button>
+                        <button className="btn-save" style={{ flex: 1, backgroundColor: '#10b981' }} onClick={handleDownloadCSV}>
+                            CSV ڈاؤن لوڈ کریں 📥
+                        </button>
+                    </>
+                )}
                 <button
                     className="btn-cancel"
                     style={{ height: '100%', padding: '0.875rem 1rem', width: 'auto', backgroundColor: 'var(--card-bg)' }}
@@ -267,14 +273,16 @@ export default function RecordsClient({ initialEntries, backPath = "/dashboard" 
                                             >
                                                 ✎
                                             </button>
-                                            <button
-                                                className="action-btn action-btn-delete"
-                                                onClick={() => handleDelete(entry.id)}
-                                                disabled={isDeleting}
-                                                title="ڈیلیٹ کریں"
-                                            >
-                                                🗑
-                                            </button>
+                                            {canDelete && (
+                                                <button
+                                                    className="action-btn action-btn-delete"
+                                                    onClick={() => handleDelete(entry.id)}
+                                                    disabled={isDeleting}
+                                                    title="ڈیلیٹ کریں"
+                                                >
+                                                    🗑
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

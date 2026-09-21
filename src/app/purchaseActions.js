@@ -1,6 +1,17 @@
 "use server";
 import { prisma } from "../lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requireAdminUser, requireDataEntryUser } from "../lib/auth";
+
+async function dataEntryPermissionError() {
+    const { error } = await requireDataEntryUser();
+    return error;
+}
+
+async function adminPermissionError() {
+    const { error } = await requireAdminUser();
+    return error;
+}
 
 // --- STORES ---
 let storesSeeded = false;
@@ -54,6 +65,9 @@ export async function getStores() {
 }
 
 export async function addStore(data) {
+    const authError = await dataEntryPermissionError();
+    if (authError) return authError;
+
     try {
         const store = await prisma.store.create({ data });
         revalidatePath('/purchases');
@@ -66,6 +80,9 @@ export async function addStore(data) {
 }
 
 export async function updateStore(id, data) {
+    const authError = await adminPermissionError();
+    if (authError) return authError;
+
     try {
         const store = await prisma.store.update({
             where: { id: parseInt(id) },
@@ -81,6 +98,9 @@ export async function updateStore(id, data) {
 }
 
 export async function deleteStore(id) {
+    const authError = await adminPermissionError();
+    if (authError) return authError;
+
     try {
         const usageCount = await prisma.purchaseLine.count({
             where: { storeId: parseInt(id) }
@@ -171,6 +191,9 @@ export async function getItems() {
 }
 
 export async function addItem(data) {
+    const authError = await dataEntryPermissionError();
+    if (authError) return authError;
+
     try {
         const item = await prisma.item.create({ data });
         revalidatePath('/purchases');
@@ -183,6 +206,9 @@ export async function addItem(data) {
 }
 
 export async function updateItem(id, data) {
+    const authError = await adminPermissionError();
+    if (authError) return authError;
+
     try {
         const item = await prisma.item.update({
             where: { id: parseInt(id) },
@@ -198,6 +224,9 @@ export async function updateItem(id, data) {
 }
 
 export async function deleteItem(id) {
+    const authError = await adminPermissionError();
+    if (authError) return authError;
+
     try {
         const usageCount = await prisma.purchaseLine.count({
             where: { itemId: parseInt(id) }
@@ -418,6 +447,9 @@ export async function getPurchaseEntryByDate(date) {
 }
 
 export async function addPurchaseEntry(date, notes, lines) {
+    const authError = await dataEntryPermissionError();
+    if (authError) return authError;
+
     try {
         const result = await prisma.$transaction(async (tx) => {
             const entry = await tx.purchaseEntry.upsert({
@@ -441,6 +473,9 @@ export async function addPurchaseEntry(date, notes, lines) {
 }
 
 export async function updatePurchaseEntry(id, date, notes, lines) {
+    const authError = await dataEntryPermissionError();
+    if (authError) return authError;
+
     try {
         const result = await prisma.$transaction(async (tx) => {
             const entry = await tx.purchaseEntry.findUnique({

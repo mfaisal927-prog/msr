@@ -3,6 +3,10 @@ import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 
 export const AUTH_COOKIE_NAME = "malik_sajawal_session";
+export const USER_ROLES = {
+  ADMIN: "ADMIN",
+  STAFF: "STAFF",
+};
 
 const LOCAL_AUTH_SECRET = "malik-sajawal-local-dev-secret-change-before-vercel";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
@@ -66,6 +70,7 @@ function createSessionValue(user) {
     JSON.stringify({
       sub: user.id,
       username: user.username,
+      role: user.role || USER_ROLES.STAFF,
       exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SECONDS,
     })
   ).toString("base64url");
@@ -106,6 +111,20 @@ export async function ensureAdminUser() {
   });
 }
 
+export async function getPrimaryAdminId() {
+  const firstUser = await prisma.adminUser.findFirst({
+    orderBy: { id: "asc" },
+    select: { id: true },
+  });
+
+  return firstUser?.id || null;
+}
+
+export async function getUserRole(userId) {
+  const primaryAdminId = await getPrimaryAdminId();
+  return primaryAdminId && Number(userId) === primaryAdminId ? USER_ROLES.ADMIN : USER_ROLES.STAFF;
+}
+
 export async function setAuthCookie(user) {
   const cookieStore = await cookies();
 
@@ -134,5 +153,40 @@ export async function getCurrentUser() {
     select: { id: true, username: true },
   });
 
-  return user;
+  if (!user) return null;
+
+  return {
+    ...user,
+    role: await getUserRole(user.id),
+  };
+}
+
+export async function requireCurrentUser() {
+  const user = await getCurrentUser();
+  if (!user) {
+    return {
+      user: null,
+      error: { success: false, error: "براہِ کرم دوبارہ login کریں۔" },
+    };
+  }
+
+  return { user, error: null };
+}
+
+export async function requireAdminUser() {
+  const { user, error } = await requireCurrentUser();
+  if (error) return { user: null, error };
+
+  if (user.role !== USER_ROLES.ADMIN) {
+    return {
+      user,
+      error: { success: false, error: "یہ کام صرف admin کر سکتا ہے۔" },
+    };
+  }
+
+  return { user, error: null };
+}
+
+export async function requireDataEntryUser() {
+  return requireCurrentUser();
 }

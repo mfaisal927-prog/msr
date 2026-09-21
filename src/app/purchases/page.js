@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getItemUsageSummary, getPurchaseHistory } from "../purchaseActions";
+import { getCurrentUser } from "../../lib/auth";
 import {
     CalendarDays,
     History,
@@ -43,10 +44,12 @@ function periodSubtitle(ranges, key) {
 export default async function PurchasesDashboardPage({ searchParams }) {
     const resolvedSearchParams = await searchParams;
     const customDays = sanitizeDays(resolvedSearchParams?.days || 7);
-    const [history, usageSummary] = await Promise.all([
+    const [history, usageSummary, currentUser] = await Promise.all([
         getPurchaseHistory(),
-        getItemUsageSummary(customDays)
+        getItemUsageSummary(customDays),
+        getCurrentUser()
     ]);
+    const isAdmin = currentUser?.role === "ADMIN";
 
     const usageCards = [
         {
@@ -99,20 +102,24 @@ export default async function PurchasesDashboardPage({ searchParams }) {
                     <div className="stat-label">آج کی خریداری کے اندراج</div>
                 </Link>
 
-                <Link href="/items" className="stat-card" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <ShoppingBag size={40} color="#3b82f6" style={{ marginBottom: '10px' }} />
-                    <div className="stat-label">آئٹمز (سامان)</div>
-                </Link>
+                {isAdmin && (
+                    <>
+                        <Link href="/items" className="stat-card" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                            <ShoppingBag size={40} color="#3b82f6" style={{ marginBottom: '10px' }} />
+                            <div className="stat-label">آئٹمز (سامان)</div>
+                        </Link>
 
-                <Link href="/stores" className="stat-card" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <Store size={40} color="#f59e0b" style={{ marginBottom: '10px' }} />
-                    <div className="stat-label">اسٹورز و سپلائرز</div>
-                </Link>
+                        <Link href="/stores" className="stat-card" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                            <Store size={40} color="#f59e0b" style={{ marginBottom: '10px' }} />
+                            <div className="stat-label">اسٹورز و سپلائرز</div>
+                        </Link>
 
-                <Link href="/price-compare" className="stat-card" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <Search size={40} color="#8b5cf6" style={{ marginBottom: '10px' }} />
-                    <div className="stat-label">قیمتوں کا موازنہ</div>
-                </Link>
+                        <Link href="/price-compare" className="stat-card" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                            <Search size={40} color="#8b5cf6" style={{ marginBottom: '10px' }} />
+                            <div className="stat-label">قیمتوں کا موازنہ</div>
+                        </Link>
+                    </>
+                )}
             </div>
 
             <section className="purchase-usage-section animate-slide-up" style={{ animationDelay: '0.16s' }}>

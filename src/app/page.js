@@ -22,7 +22,8 @@ export default function Login() {
     }
 
     const nextPath = new URLSearchParams(window.location.search).get("next");
-    const safeNextPath = nextPath?.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/dashboard";
+    const defaultPath = response.user?.role === "STAFF" ? "/daily-entry" : "/dashboard";
+    const safeNextPath = nextPath?.startsWith("/") && !nextPath.startsWith("//") ? nextPath : defaultPath;
 
     router.replace(safeNextPath);
     router.refresh();

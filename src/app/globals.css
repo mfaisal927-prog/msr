@@ -656,6 +656,12 @@ p {
   border: 1px solid #fecaca;
 }
 
+.info-pill {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
 /* Actions Section */
 .actions-section {
   display: grid;

@@ -41,6 +41,8 @@ export default async function MonthlyRecordsPage({ params }) {
                 <RecordsClient
                     initialEntries={entries}
                     backPath={`/monthly/${resolvedParams.year}/${resolvedParams.month}`}
+                    canDelete
+                    canExport
                 />
             </div>
         </div>

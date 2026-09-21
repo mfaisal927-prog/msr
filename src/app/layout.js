@@ -2,6 +2,7 @@ import { Noto_Sans_Arabic, Noto_Nastaliq_Urdu, Inter, Poppins, Roboto } from "ne
 import "./globals.css";
 import ClientLayout from "./ClientLayout";
 import PwaRuntime from "./PwaRuntime";
+import { getCurrentUser } from "../lib/auth";
 
 const notoSansArabic = Noto_Sans_Arabic({
   subsets: ["arabic"],
@@ -76,12 +77,14 @@ export const viewport = {
   colorScheme: "light dark",
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const currentUser = await getCurrentUser();
+
   return (
     <html lang="ur" dir="rtl" data-theme="light" suppressHydrationWarning>
       <body className={`${notoSansArabic.variable} ${notoNastaliqUrdu.variable} ${inter.variable} ${poppins.variable} ${roboto.variable}`} suppressHydrationWarning>
         <PwaRuntime />
-        <ClientLayout>
+        <ClientLayout currentUser={currentUser}>
           {children}
         </ClientLayout>
       </body>
